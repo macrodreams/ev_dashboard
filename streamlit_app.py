@@ -1,9 +1,12 @@
 import streamlit as st
 import pandas as pd
 import os
+import matplotlib.pyplot as plt
+import seaborn as sns
 from dotenv import load_dotenv
 from pandasai import SmartDataframe
 from pandasai.llm import OpenAI
+import openai
 
 # Load environment variables
 load_dotenv()
@@ -52,12 +55,11 @@ Charts or tables must reference filtered data, not full dumps.
 Your job is to reduce token usage while delivering actionable insights.
 """
 
-llm = OpenAI(api_token=OPENAI_API_KEY, model="gpt-4o")
+llm = OpenAI(model="gpt-4o")
 EV_SmartDF = SmartDataframe(EV_df, config={"llm": llm, "system_message": system_prompt})
 
 def refine_prompt(user_prompt):
-    from openai import OpenAI as RawOpenAI
-    client = RawOpenAI(api_key=OPENAI_API_KEY)
+    client = OpenAI()
     system_instruction = """
 You are a data analyst assistant helping refine user questions for a SmartDataframe
 containing EV charging station data from Google Maps.
@@ -69,7 +71,7 @@ Use field names like: EV Vendor, city, state, rank, totalScore, reviewsCount, et
 Format the prompt clearly and naturally for LLM data querying.
 Return only the improved prompt. Do NOT explain or comment.
 """
-    response = client.chat.completions.create(
+    response = openai.chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": system_instruction},
@@ -79,8 +81,7 @@ Return only the improved prompt. Do NOT explain or comment.
     return response.choices[0].message.content.strip()
 
 def clean_llm_output(raw_output):
-    from openai import OpenAI as RawOpenAI
-    client = RawOpenAI(api_key=OPENAI_API_KEY)
+    client = OpenAI()
     system_instruction = """
 You are a cleanup assistant for an AI data chatbot.
 
@@ -99,7 +100,7 @@ Ignore any lines like:
 Do not explain what you did — just return the clean result.
 """
     safe_output = str(raw_output)
-    response = client.chat.completions.create(
+    response = openai.chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": system_instruction},
@@ -154,16 +155,16 @@ user_prompt = st.text_area(
 if st.button("Submit Query") and user_prompt:
     with st.spinner("Processing your query..."):
         refined = refine_prompt(user_prompt)
-        st.info(f"Refined User Question: {refined}")  # Display the refined prompt in the Streamlit UI
+        st.info(f"Refined User Question: {refined}")
         response = EV_SmartDF.chat(refined)
         final_response = clean_llm_output(response)
+
     st.subheader("LLM Response:")
     st.write(final_response)
-    # Try to display chart if present
+
     if hasattr(response, 'chart') and response.chart is not None:
         try:
-            import matplotlib.figure
-            if isinstance(response.chart, matplotlib.figure.Figure):
+            if isinstance(response.chart, plt.Figure):
                 st.pyplot(response.chart)
             elif isinstance(response.chart, str) and (response.chart.endswith('.png') or response.chart.endswith('.jpg')):
                 from PIL import Image
