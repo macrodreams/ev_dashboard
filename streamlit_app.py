@@ -26,9 +26,6 @@ else:
     st.error(f"Could not find {DATA_PATH}. Please ensure the file exists in the repository.")
     st.stop()
 
-# Calculate Growth Potential (High Review Count + Low Rank Value)
-EV_df['growth_potential'] = EV_df['reviewsCount'] / (EV_df['rank'] + 1)
-
 # Sidebar with predefined questions
 st.sidebar.header("Predefined Analysis Questions")
 
@@ -37,7 +34,6 @@ predefined_questions = {
         "Which cities have the highest number of EV stations?",
         "List all vendors with station count in San Jose, CA, and show it in a bar chart.",
         "What is the average rank of stations in each city?",
-        "Which states show the fastest growth in EV station count?",
     ],
     "Vendor Performance Insights": [
         "Which EV vendor has the most stations overall?",
@@ -48,7 +44,6 @@ predefined_questions = {
     "Quality & Ranking": [
         "Which vendor has the best average rank across all locations?",
         "Which stations have the most user reviews? List top 5 with vendor and location.",
-        "Which vendors consistently score high across multiple cities?",
     ],
     "Trends & Strategy": [
         "Create a bar chart comparing total stations by vendor in California.",
@@ -155,20 +150,6 @@ if submit and final_prompt:
             st.write("Top 5 Vendors Expanding Across the Most Metro Areas")
             st.bar_chart(top_expanding_vendors)
 
-        # New logic for vendors consistently scoring high across multiple cities
-        elif "which vendors consistently score high across multiple cities" in query:
-            # Calculate average review scores and ranks for each vendor across all cities
-            vendor_scores = EV_df.groupby('EV Vendor').agg(
-                avg_score=('totalScore', 'mean'),
-                avg_rank=('rank', 'mean')
-            )
-
-            # Filter vendors with consistently high scores (e.g., avg_score > 4) and low average ranks (e.g., avg_rank < 3)
-            consistent_vendors = vendor_scores[(vendor_scores['avg_score'] > 4) & (vendor_scores['avg_rank'] < 3)]
-            
-            st.write("Vendors with Consistently High Scores Across Multiple Cities:")
-            st.table(consistent_vendors)
-
         # New logic for vendors with presence across the most number of cities
         elif "which vendors have presence across the most number of cities" in query:
             # Count the number of unique cities each vendor operates in
@@ -177,22 +158,6 @@ if submit and final_prompt:
             # Display the top vendors with the most presence across cities
             st.write("Vendors with Presence Across the Most Number of Cities:")
             st.table(vendor_city_count.head(10))
-
-        # New logic for states showing the fastest growth in EV station count
-        elif "which states show the fastest growth in ev station count" in query:
-            # Ensure there is a 'year' column (or create one based on the 'date' column if it exists)
-            if 'date' in EV_df.columns:
-                EV_df['year'] = pd.to_datetime(EV_df['date']).dt.year
-            
-            # Group by state and year, then count the number of stations each year per state
-            state_yearly_counts = EV_df.groupby(['state', 'year']).size().unstack(fill_value=0)
-            
-            # Calculate the growth rate (percentage change) for each state
-            state_growth = state_yearly_counts.pct_change(axis='columns').mean(axis=1).sort_values(ascending=False)
-            
-            # Display the states with the fastest growth
-            st.write("States Showing the Fastest Growth in EV Station Count:")
-            st.table(state_growth.head(10))
 
         else:
             st.warning("Query not recognized or not supported yet. Please rephrase or select a predefined option.")
