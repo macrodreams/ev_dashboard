@@ -1,13 +1,39 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import os
 from dotenv import load_dotenv
-from openai import OpenAI
+import openai
 
 # Load environment variables
 load_dotenv()
+
+# Add theme toggle
+theme = st.radio("Select Theme", ["Light", "Dark"])
+
+if theme == "Dark":
+    st.markdown("""
+    <style>
+    body {
+        background-color: #121212;
+        color: white;
+    }
+    .sidebar {
+        background-color: #2e2e2e;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <style>
+    body {
+        background-color: white;
+        color: black;
+    }
+    .sidebar {
+        background-color: #f0f0f0;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 st.set_page_config(page_title="EV Charging Station Insights", layout="wide")
 st.title("EV Charging Station Insights (Google Maps Data)")
@@ -18,7 +44,7 @@ if not OPENAI_API_KEY:
     st.error("Please set your OPENAI_API_KEY in a .env file or Streamlit secrets.")
     st.stop()
 
-# File loader
+# File loader: load from repo instead of upload
 DATA_PATH = os.path.join(os.path.dirname(__file__), "cleaned_ev_data.csv")
 if os.path.exists(DATA_PATH):
     EV_df = pd.read_csv(DATA_PATH)
@@ -45,6 +71,9 @@ predefined_questions = {
         "Which vendor has the best average rank across all locations?",
         "Which stations have the most user reviews? List top 5 with vendor and location.",
     ],
+    "Risk/Complaint Indicators": [
+        "Summarize common user complaints based on reviews.",
+    ],
     "Trends & Strategy": [
         "Create a bar chart comparing total stations by vendor in California.",
     ],
@@ -60,61 +89,34 @@ question = st.sidebar.radio(
 st.sidebar.markdown("---")
 st.sidebar.markdown("Or type your own question below:")
 
+# Main UI prompt box (pre-filled with selected question)
 user_prompt = st.text_area(
     "Ask a question about the EV charging station data:",
     value=question if question else "",
     key="main_prompt_box"
 )
 
-submit = st.button("Submit Query")
-
-if submit and user_prompt:
+if st.button("Submit Query") and user_prompt:
     with st.spinner("Processing your query..."):
-        query = user_prompt.lower()
-
-        if "highest number of ev stations" in query:
-            city_counts = EV_df['city'].value_counts().head(10)
-            st.bar_chart(city_counts)
-
-        elif "station count in san jose" in query:
-            san_jose_df = EV_df[(EV_df['city'].str.lower() == "san jose") & (EV_df['state'].str.upper() == "CA")]
-            vendor_counts = san_jose_df['EV Vendor'].value_counts()
-            fig, ax = plt.subplots()
-            sns.barplot(x=vendor_counts.values, y=vendor_counts.index, ax=ax)
-            ax.set_title("EV Station Counts by Vendor in San Jose, CA")
-            st.pyplot(fig)
-
-        elif "average rank of stations in each city" in query:
-            avg_rank = EV_df.groupby('city')['rank'].mean().sort_values()
-            st.bar_chart(avg_rank.head(10))
-
-        elif "most stations overall" in query:
-            vendor_counts = EV_df['EV Vendor'].value_counts()
-            st.bar_chart(vendor_counts.head(10))
-
-        elif "average review score for each ev vendor" in query:
-            avg_scores = EV_df.groupby('EV Vendor')['totalScore'].mean().sort_values(ascending=False)
-            st.bar_chart(avg_scores.head(10))
-
-        elif "total review count" in query:
-            total_reviews = EV_df.groupby('EV Vendor')['reviewsCount'].sum().sort_values(ascending=False)
-            st.bar_chart(total_reviews.head(10))
-
-        elif "best average rank" in query:
-            best_rank = EV_df.groupby('EV Vendor')['rank'].mean().sort_values()
-            st.bar_chart(best_rank.head(10))
-
-        elif "most user reviews" in query:
-            top_reviews = EV_df[['EV Vendor', 'location', 'reviewsCount']].sort_values(by='reviewsCount', ascending=False).head(5)
-            st.table(top_reviews)
-
-        elif "total stations by vendor in california" in query:
-            ca_df = EV_df[EV_df['state'].str.upper() == "CA"]
-            ca_vendor_counts = ca_df['EV Vendor'].value_counts()
-            fig, ax = plt.subplots()
-            sns.barplot(x=ca_vendor_counts.values, y=ca_vendor_counts.index, ax=ax)
-            ax.set_title("EV Stations by Vendor in California")
-            st.pyplot(fig)
-
-        else:
-            st.warning("Query not recognized or not supported yet. Please rephrase or select a predefined option.")
+        refined = refine_prompt(user_prompt)
+        st.info(f"Refined User Question: {refined}")  # Display the refined prompt in the Streamlit UI
+        response = EV_SmartDF.chat(refined)
+        final_response = clean_llm_output(response)
+    st.subheader("LLM Response:")
+    st.write(final_response)
+    # Try to display chart if present
+    if hasattr(response, 'chart') and response.chart is not None:
+        try:
+            import matplotlib.figure
+            if isinstance(response.chart, matplotlib.figure.Figure):
+                st.pyplot(response.chart)
+            elif isinstance(response.chart, str) and (response.chart.endswith('.png') or response.chart.endswith('.jpg')):
+                from PIL import Image
+                import os
+                if os.path.exists(response.chart):
+                    img = Image.open(response.chart)
+                    st.image(img, caption="Generated Chart")
+                else:
+                    st.warning(f"Chart image file not found: {response.chart}")
+        except Exception as e:
+            st.warning(f"Could not display chart: {e}")
