@@ -1,9 +1,13 @@
 import streamlit as st
 from transformers import pipeline
-import matplotlib.pyplot as plt
 
-# Load the pre-trained sentiment analysis pipeline (without caching)
-sentiment_analyzer = pipeline("sentiment-analysis")
+# Cache the model to avoid loading it repeatedly
+@st.cache(allow_output_mutation=True)
+def load_model():
+    return pipeline("sentiment-analysis")
+
+# Load the pre-trained sentiment analysis pipeline
+sentiment_analyzer = load_model()
 
 # Streamlit UI Elements
 st.title("EV Charging Station Sentiment Analysis")
@@ -23,13 +27,3 @@ if st.button("Analyze Sentiment"):
         # Display the sentiment result
         st.write(f"Sentiment: {sentiment_label}")
         st.write(f"Confidence Score: {sentiment_score:.2f}")
-
-        # Optional: Show a bar chart to visualize sentiment
-        fig, ax = plt.subplots()
-        ax.bar(sentiment_label, sentiment_score, color='skyblue')
-        ax.set_xlabel('Sentiment')
-        ax.set_ylabel('Confidence Score')
-        st.pyplot(fig)
-
-    else:
-        st.write("Please enter a review to analyze!")
