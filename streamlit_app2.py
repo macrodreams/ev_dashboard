@@ -13,7 +13,7 @@ st.set_page_config(page_title="EV Charging Station Insights", layout="wide")
 st.title("EV Charging Station Insights (Google Maps Data)")
 
 # API Key setup (use .env or Streamlit secrets)
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = st.secrets['OpenAI_API_KEY']
 if not OPENAI_API_KEY:
     st.error("Please set your OPENAI_API_KEY in a .env file or Streamlit secrets.")
     st.stop()
@@ -81,7 +81,7 @@ Ignore any lines like:
 Do not explain what you did — just return the clean result.
 """
     safe_output = str(raw_output)
-    response = client.chat.completions.create(
+    response = openai.chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": system_instruction},
@@ -96,6 +96,7 @@ user_prompt = st.text_area("Ask a question about the EV charging station data:")
 if st.button("Submit Query") and user_prompt:
     with st.spinner("Processing your query..."):
         refined = refine_prompt(user_prompt)
+        st.info(f"Refined User Question: {refined}")  # Display the refined prompt in the Streamlit UI
         response = EV_SmartDF.chat(refined)
         final_response = clean_llm_output(response)
     st.subheader("LLM Response:")
