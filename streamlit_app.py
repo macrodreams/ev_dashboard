@@ -169,5 +169,14 @@ if submit and final_prompt:
             st.write("Vendors with Consistently High Scores Across Multiple Cities:")
             st.table(consistent_vendors)
 
+        # New logic for vendors with presence across the most number of cities
+        elif "which vendors have presence across the most number of cities" in query:
+            # Count the number of unique cities each vendor operates in
+            vendor_city_count = EV_df.groupby('EV Vendor')['city'].nunique().sort_values(ascending=False)
+            
+            # Display the top vendors with the most presence across cities
+            st.write("Vendors with Presence Across the Most Number of Cities:")
+            st.table(vendor_city_count.head(10))
+
         else:
             st.warning("Query not recognized or not supported yet. Please rephrase or select a predefined option.")
