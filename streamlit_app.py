@@ -13,7 +13,7 @@ st.set_page_config(page_title="EV Charging Station Insights", layout="wide")
 st.title("EV Charging Station Insights (Google Maps Data)")
 
 # API Key setup (use .env or Streamlit secrets)
-OPENAI_API_KEY = st.secrets['OPENAI_API_KEY']
+OPENAI_API_KEY = st.secrets['OpenAI_API_KEY']
 if not OPENAI_API_KEY:
     st.error("Please set your OPENAI_API_KEY in a .env file or Streamlit secrets.")
     st.stop()
