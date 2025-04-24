@@ -47,7 +47,6 @@ predefined_questions = {
     ],
     "Trends & Strategy": [
         "Create a bar chart comparing total stations by vendor in California.",
-        "Show top 5 cities with the highest growth potential based on review counts and low rank values.",
         "What trends are emerging in vendor performance across major metro areas?",
     ],
 }
@@ -120,12 +119,6 @@ if submit and final_prompt:
             sns.barplot(x=ca_vendor_counts.values, y=ca_vendor_counts.index, ax=ax)
             ax.set_title("EV Stations by Vendor in California")
             st.pyplot(fig)
-
-        # New logic for showing top 5 cities with highest growth potential
-        elif "highest growth potential" in query or "top 5 cities with highest growth potential" in query:
-            top_5_growth = EV_df.groupby('city').agg({'growth_potential': 'mean'}).sort_values(by='growth_potential', ascending=False).head(5)
-            st.write("Top 5 Cities with the Highest Growth Potential Based on Review Counts and Low Rank Values:")
-            st.table(top_5_growth)
 
         # Trend analysis for vendor performance across metro areas
         elif "trends are emerging in vendor performance" in query or "what trends are emerging in vendor performance" in query:
