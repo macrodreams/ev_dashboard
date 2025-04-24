@@ -105,8 +105,12 @@ if submit and final_prompt:
             st.bar_chart(total_reviews.head(10))
 
         elif "best average rank" in query:
-            best_rank = EV_df.groupby('EV Vendor')['rank'].mean().sort_values()
-            st.bar_chart(best_rank.head(10))
+            # Calculate the average rank for each vendor
+            avg_rank = EV_df.groupby('EV Vendor')['rank'].mean().sort_values()
+
+            # Display the vendor with the best (lowest) average rank
+            st.write("Vendor with the Best Average Rank Across All Locations:")
+            st.write(avg_rank.head(1))  # Display the vendor with the best rank
 
         elif "most user reviews" in query:
             top_reviews = EV_df[['EV Vendor', 'location', 'reviewsCount']].sort_values(by='reviewsCount', ascending=False).head(5)
