@@ -158,6 +158,7 @@ if st.button("Submit Query") and user_prompt:
         st.info(f"Refined User Question: {refined}")  # Display the refined prompt in the Streamlit UI
         try:
             response = EV_SmartDF.chat(refined)
+            st.write(f"Raw Response from LLM: {response}")  # Debugging: Log the raw response
             final_response = clean_llm_output(response)
         except Exception as e:
             st.error(f"Error occurred during query execution: {e}")
