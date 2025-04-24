@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
 import os
-import matplotlib.pyplot as plt
-import seaborn as sns
 from dotenv import load_dotenv
 from pandasai import SmartDataframe
 from pandasai.llm import OpenAI
 import openai
+from PIL import Image
 
 # Load environment variables
 load_dotenv()
@@ -55,7 +54,7 @@ Charts or tables must reference filtered data, not full dumps.
 Your job is to reduce token usage while delivering actionable insights.
 """
 
-llm = OpenAI(model="gpt-4o")
+llm = OpenAI(Model="GPT-4o")
 EV_SmartDF = SmartDataframe(EV_df, config={"llm": llm, "system_message": system_prompt})
 
 def refine_prompt(user_prompt):
@@ -155,23 +154,23 @@ user_prompt = st.text_area(
 if st.button("Submit Query") and user_prompt:
     with st.spinner("Processing your query..."):
         refined = refine_prompt(user_prompt)
-        st.info(f"Refined User Question: {refined}")
+        st.info(f"Refined User Question: {refined}")  # Display the refined prompt in the Streamlit UI
         response = EV_SmartDF.chat(refined)
         final_response = clean_llm_output(response)
-
     st.subheader("LLM Response:")
     st.write(final_response)
+    # Try to display chart if present
+    if hasattr(response, 'chart') and response.chart:
+        chart_path = response.chart
+        st.write(f"Chart path: {chart_path}")  # Debugging: Log the chart path
 
-    if hasattr(response, 'chart') and response.chart is not None:
-        try:
-            if isinstance(response.chart, plt.Figure):
-                st.pyplot(response.chart)
-            elif isinstance(response.chart, str) and (response.chart.endswith('.png') or response.chart.endswith('.jpg')):
-                from PIL import Image
-                if os.path.exists(response.chart):
-                    img = Image.open(response.chart)
-                    st.image(img, caption="Generated Chart")
-                else:
-                    st.warning(f"Chart image file not found: {response.chart}")
-        except Exception as e:
-            st.warning(f"Could not display chart: {e}")
+        # Check if the file exists at the given path
+        if os.path.exists(chart_path):
+            try:
+                # Open the image and display it using Streamlit
+                img = Image.open(chart_path)
+                st.image(img, caption="Generated Chart")
+            except Exception as e:
+                st.error(f"Could not display chart from path: {chart_path}. Error: {e}")
+        else:
+            st.warning(f"Chart file does not exist at: {chart_path}")
