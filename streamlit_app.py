@@ -34,18 +34,23 @@ predefined_questions = {
         "Which cities have the highest number of EV stations?",
         "List all vendors with station count in San Jose, CA, and show it in a bar chart.",
         "What is the average rank of stations in each city?",
+        "Which states show the fastest growth in EV station count?",
     ],
     "Vendor Performance Insights": [
         "Which EV vendor has the most stations overall?",
         "Show average review score for each EV vendor in descending order.",
         "List all vendors and their total review count.",
+        "Which vendors have presence across the most number of cities?",
     ],
     "Quality & Ranking": [
         "Which vendor has the best average rank across all locations?",
         "Which stations have the most user reviews? List top 5 with vendor and location.",
+        "Which vendors consistently score high across multiple cities?",
     ],
     "Trends & Strategy": [
         "Create a bar chart comparing total stations by vendor in California.",
+        "Show top 5 cities with the highest growth potential based on review counts and low rank values.",
+        "What trends are emerging in vendor performance across major metro areas?",
     ],
 }
 
