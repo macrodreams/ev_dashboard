@@ -56,7 +56,7 @@ Charts or tables must reference filtered data, not full dumps.
 Your job is to reduce token usage while delivering actionable insights.
 """
 
-llm = OpenAI(Model="GPT-4o")
+llm = OpenAI(model="gpt-4o")
 EV_SmartDF = SmartDataframe(EV_df, config={"llm": llm, "system_message": system_prompt})
 
 def refine_prompt(user_prompt):
@@ -72,7 +72,7 @@ Use field names like: EV Vendor, city, state, rank, totalScore, reviewsCount, et
 Format the prompt clearly and naturally for LLM data querying.
 Return only the improved prompt. Do NOT explain or comment.
 """
-    response = openai.chat.completions.create(
+    response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": system_instruction},
@@ -101,7 +101,7 @@ Ignore any lines like:
 Do not explain what you did — just return the clean result.
 """
     safe_output = str(raw_output)
-    response = openai.chat.completions.create(
+    response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": system_instruction},
@@ -109,3 +109,63 @@ Do not explain what you did — just return the clean result.
         ]
     )
     return response.choices[0].message.content.strip()
+
+# Sidebar with predefined questions
+st.sidebar.header("Predefined Analysis Questions")
+
+predefined_questions = {
+    "Location-Based Analysis": [
+        "Which cities have the highest number of EV stations?",
+        "List all vendors with station count in San Jose, CA, and show it in a bar chart.",
+        "What is the average rank of stations in each city?",
+    ],
+    "Vendor Performance Insights": [
+        "Which EV vendor has the most stations overall?",
+        "Show average review score for each EV vendor in descending order.",
+        "List all vendors and their total review count.",
+    ],
+    "Quality & Ranking": [
+        "Which vendor has the best average rank across all locations?",
+        "Which stations have the most user reviews? List top 5 with vendor and location.",
+    ],
+    "Risk/Complaint Indicators": [
+        "Summarize common user complaints based on reviews.",
+    ],
+    "Trends & Strategy": [
+        "Create a bar chart comparing total stations by vendor in California.",
+    ],
+}
+
+category = st.sidebar.selectbox("Select Category", list(predefined_questions.keys()))
+question = st.sidebar.radio(
+    "Choose a question:",
+    predefined_questions[category],
+    key="predefined_question"
+)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("Or type your own question below:")
+
+# Main UI prompt box (pre-filled with selected question)
+user_prompt = st.text_area(
+    "Ask a question about the EV charging station data:",
+    value=question if question else "",
+    key="main_prompt_box"
+)
+
+if st.button("Submit Query") and user_prompt:
+    with st.spinner("Processing your query..."):
+        refined = refine_prompt(user_prompt)
+        st.info(f"Refined User Question: {refined}")
+        response = EV_SmartDF.chat(refined)
+        final_response = clean_llm_output(response)
+    st.subheader("LLM Response:")
+    st.write(final_response)
+
+    # Optional: Display chart if it was generated
+    try:
+        chart_path = "/mount/src/ev_dashboard/exports/charts/temp_chart.png"
+        if os.path.exists(chart_path):
+            st.image(chart_path, caption="Generated Chart")
+    except Exception as e:
+        st.warning(f"Chart display error: {e}")
