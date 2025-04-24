@@ -81,7 +81,7 @@ Ignore any lines like:
 Do not explain what you did — just return the clean result.
 """
     safe_output = str(raw_output)
-    response = client.chat.completions.create(
+    response = openai.chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": system_instruction},
