@@ -1,4 +1,7 @@
 streamlit
-transformers==4.30.0  # or the latest stable version
+pandas==2.2.3
+pandasai
+dotenv
+openai
 matplotlib
-torch
+pyyaml
