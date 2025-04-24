@@ -19,14 +19,14 @@ if not OPENAI_API_KEY:
     st.stop()
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
-# File uploader
-uploaded_file = st.file_uploader("Upload cleaned_ev_data.csv", type=["csv"])
-if uploaded_file is not None:
-    EV_df = pd.read_csv(uploaded_file)
-    st.success("File uploaded successfully!")
+# File loader: load from repo instead of upload
+DATA_PATH = os.path.join(os.path.dirname(__file__), "cleaned_ev_data.csv")
+if os.path.exists(DATA_PATH):
+    EV_df = pd.read_csv(DATA_PATH)
+    st.success(f"Loaded {DATA_PATH} successfully!")
     st.dataframe(EV_df.head())
 else:
-    st.info("Please upload your cleaned_ev_data.csv file to proceed.")
+    st.error(f"Could not find {DATA_PATH}. Please ensure the file exists in the repository.")
     st.stop()
 
 system_prompt = """
