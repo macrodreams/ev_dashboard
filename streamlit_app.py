@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 import os
 from dotenv import load_dotenv
-from pandasai import SmartDataframe
-from pandasai.llm import OpenAI
-import openai
-from PIL import Image
+from openai import OpenAI
 
 # Load environment variables
 load_dotenv()
@@ -18,9 +17,8 @@ OPENAI_API_KEY = st.secrets['OpenAI_API_KEY']
 if not OPENAI_API_KEY:
     st.error("Please set your OPENAI_API_KEY in a .env file or Streamlit secrets.")
     st.stop()
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
-# File loader: load from repo instead of upload
+# File loader
 DATA_PATH = os.path.join(os.path.dirname(__file__), "cleaned_ev_data.csv")
 if os.path.exists(DATA_PATH):
     EV_df = pd.read_csv(DATA_PATH)
@@ -28,85 +26,6 @@ if os.path.exists(DATA_PATH):
 else:
     st.error(f"Could not find {DATA_PATH}. Please ensure the file exists in the repository.")
     st.stop()
-
-system_prompt = """
-You are a data assistant for an electric vehicle (EV) charging station dashboard.
-
-You must ONLY access and query the columns required to answer the user's question. Do NOT scan or consider the full dataset unless absolutely necessary.
-
-Available columns include:
-- EV Vendor
-- city
-- state
-- address
-- totalScore
-- reviewsCount
-- categoryName
-- rank
-- location
-
-Ignore any large or nested fields like: reviews, reviewsDistribution, popularTimesHistogram, or detailed JSONs unless specifically asked.
-
-Avoid including the full DataFrame or long context in your output. Respond clearly, concisely, and use only what’s needed.
-
-Charts or tables must reference filtered data, not full dumps.
-
-Your job is to reduce token usage while delivering actionable insights.
-"""
-
-llm = OpenAI(Model="GPT-4o")
-EV_SmartDF = SmartDataframe(EV_df, config={"llm": llm, "system_message": system_prompt})
-
-def refine_prompt(user_prompt):
-    client = OpenAI()
-    system_instruction = """
-You are a data analyst assistant helping refine user questions for a SmartDataframe
-containing EV charging station data from Google Maps.
-
-Make the prompt specific, concise, and compatible with PandasAI.
-Avoid using advanced or restricted matplotlib methods like 'tight_layout' or 'gca'.
-Prefer simple operations like group by, counts, averages, bar/line plots.
-Use field names like: EV Vendor, city, state, rank, totalScore, reviewsCount, etc.
-Format the prompt clearly and naturally for LLM data querying.
-Return only the improved prompt. Do NOT explain or comment.
-"""
-    response = openai.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_instruction},
-            {"role": "user", "content": user_prompt}
-        ]
-    )
-    return response.choices[0].message.content.strip()
-
-def clean_llm_output(raw_output):
-    client = OpenAI()
-    system_instruction = """
-You are a cleanup assistant for an AI data chatbot.
-
-You are given raw LLM output which might include logs, errors, tracebacks, retries, or system warnings.
-Your job is to extract and return only the clean, relevant answer for the user.
-
-If a chart or table is included, describe it briefly or return it cleanly.
-Ignore any lines like:
-- ERROR:...
-- WARNING:...
-- Traceback...
-- Retry number...
-- ModuleNotFoundError...
-- Any internal PandasAI or matplotlib error logs
-
-Do not explain what you did — just return the clean result.
-"""
-    safe_output = str(raw_output)
-    response = openai.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_instruction},
-            {"role": "user", "content": safe_output}
-        ]
-    )
-    return response.choices[0].message.content.strip()
 
 # Sidebar with predefined questions
 st.sidebar.header("Predefined Analysis Questions")
@@ -126,9 +45,6 @@ predefined_questions = {
         "Which vendor has the best average rank across all locations?",
         "Which stations have the most user reviews? List top 5 with vendor and location.",
     ],
-    "Risk/Complaint Indicators": [
-        "Summarize common user complaints based on reviews.",
-    ],
     "Trends & Strategy": [
         "Create a bar chart comparing total stations by vendor in California.",
     ],
@@ -144,33 +60,61 @@ question = st.sidebar.radio(
 st.sidebar.markdown("---")
 st.sidebar.markdown("Or type your own question below:")
 
-# Main UI prompt box (pre-filled with selected question)
 user_prompt = st.text_area(
     "Ask a question about the EV charging station data:",
     value=question if question else "",
     key="main_prompt_box"
 )
 
-if st.button("Submit Query") and user_prompt:
-    with st.spinner("Processing your query..."):
-        refined = refine_prompt(user_prompt)
-        st.info(f"Refined User Question: {refined}")  # Display the refined prompt in the Streamlit UI
-        response = EV_SmartDF.chat(refined)
-        final_response = clean_llm_output(response)
-    st.subheader("LLM Response:")
-    st.write(final_response)
-    # Try to display chart if present
-    if hasattr(response, 'chart') and response.chart:
-        chart_path = response.chart
-        st.write(f"Chart path: {chart_path}")  # Debugging: Log the chart path
+submit = st.button("Submit Query")
 
-        # Check if the file exists at the given path
-        if os.path.exists(chart_path):
-            try:
-                # Open the image and display it using Streamlit
-                img = Image.open(chart_path)
-                st.image(img, caption="Generated Chart")
-            except Exception as e:
-                st.error(f"Could not display chart from path: {chart_path}. Error: {e}")
+if submit and user_prompt:
+    with st.spinner("Processing your query..."):
+        query = user_prompt.lower()
+
+        if "highest number of ev stations" in query:
+            city_counts = EV_df['city'].value_counts().head(10)
+            st.bar_chart(city_counts)
+
+        elif "station count in san jose" in query:
+            san_jose_df = EV_df[(EV_df['city'].str.lower() == "san jose") & (EV_df['state'].str.upper() == "CA")]
+            vendor_counts = san_jose_df['EV Vendor'].value_counts()
+            fig, ax = plt.subplots()
+            sns.barplot(x=vendor_counts.values, y=vendor_counts.index, ax=ax)
+            ax.set_title("EV Station Counts by Vendor in San Jose, CA")
+            st.pyplot(fig)
+
+        elif "average rank of stations in each city" in query:
+            avg_rank = EV_df.groupby('city')['rank'].mean().sort_values()
+            st.bar_chart(avg_rank.head(10))
+
+        elif "most stations overall" in query:
+            vendor_counts = EV_df['EV Vendor'].value_counts()
+            st.bar_chart(vendor_counts.head(10))
+
+        elif "average review score for each ev vendor" in query:
+            avg_scores = EV_df.groupby('EV Vendor')['totalScore'].mean().sort_values(ascending=False)
+            st.bar_chart(avg_scores.head(10))
+
+        elif "total review count" in query:
+            total_reviews = EV_df.groupby('EV Vendor')['reviewsCount'].sum().sort_values(ascending=False)
+            st.bar_chart(total_reviews.head(10))
+
+        elif "best average rank" in query:
+            best_rank = EV_df.groupby('EV Vendor')['rank'].mean().sort_values()
+            st.bar_chart(best_rank.head(10))
+
+        elif "most user reviews" in query:
+            top_reviews = EV_df[['EV Vendor', 'location', 'reviewsCount']].sort_values(by='reviewsCount', ascending=False).head(5)
+            st.table(top_reviews)
+
+        elif "total stations by vendor in california" in query:
+            ca_df = EV_df[EV_df['state'].str.upper() == "CA"]
+            ca_vendor_counts = ca_df['EV Vendor'].value_counts()
+            fig, ax = plt.subplots()
+            sns.barplot(x=ca_vendor_counts.values, y=ca_vendor_counts.index, ax=ax)
+            ax.set_title("EV Stations by Vendor in California")
+            st.pyplot(fig)
+
         else:
-            st.warning(f"Chart file does not exist at: {chart_path}")
+            st.warning("Query not recognized or not supported yet. Please rephrase or select a predefined option.")
