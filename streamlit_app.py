@@ -18,7 +18,7 @@ st.markdown(
     /* Base dark background */
     body, .stApp {
         background-color: #111217;
-        color: #ECECEC;
+        color: #FFF;
         font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     }
     /* Headings - bold, modern, high contrast */
@@ -35,7 +35,7 @@ st.markdown(
     }
     /* Inputs and text areas */
     .stTextInput, .stTextArea, .stSelectbox, .stRadio, .stDataFrame, .stAlert, .stMarkdown {
-        color: #ECECEC !important;
+        color: #FFF !important;
         background-color: #18191F !important;
         border-radius: 8px;
         border: 1px solid #23232B !important;
@@ -87,13 +87,28 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Place logo in the top-right corner using absolute positioning
+# Show logo at the top-right using st.image and columns for compatibility
+logo_path = os.path.join(os.path.dirname(__file__), 'EV ChargeInsight logo.png')
+logo_col1, logo_col2 = st.columns([8, 1])
+with logo_col2:
+    st.image(logo_path, use_column_width=False, width=72, caption=None, output_format="auto")
+
+# Optional: add a little CSS to float the logo right and add shadow
 st.markdown(
-    f'''
-    <div style="position: absolute; top: 1.5rem; right: 2.5rem; z-index: 100;">
-        <img src="file://{os.path.join(os.path.dirname(__file__), 'EV ChargeInsight logo.png')}" alt="EV ChargeInsight Logo" style="height:56px; border-radius:10px; box-shadow:0 2px 8px rgba(0,184,169,0.16); background: #23272F; padding: 4px;"/>
-    </div>
-    ''',
+    """
+    <style>
+    .element-container img[alt="EV ChargeInsight Logo"] {
+        float: right;
+        margin-top: -16px;
+        margin-bottom: 8px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,184,169,0.16);
+        background: #23272F;
+        padding: 4px;
+        height: 56px;
+    }
+    </style>
+    """,
     unsafe_allow_html=True
 )
 
