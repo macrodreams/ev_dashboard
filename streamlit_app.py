@@ -170,19 +170,13 @@ if st.button("Submit Query") and user_prompt:
         
         # Check if the response contains a chart (like a PNG or JPG file)
         if hasattr(response, 'chart') and response.chart:
-            try:
-                import matplotlib.figure
-                if isinstance(response.chart, matplotlib.figure.Figure):
-                    # Display the figure directly if it's a Matplotlib object
-                    st.pyplot(response.chart)
-                elif isinstance(response.chart, str) and (response.chart.endswith('.png') or response.chart.endswith('.jpg')):
-                    from PIL import Image
-                    import os
-                    # Check if the chart file exists and render it
-                    if os.path.exists(response.chart):
-                        img = Image.open(response.chart)
-                        st.image(img, caption="Generated Chart")
-                    else:
-                        st.warning(f"Chart image file not found: {response.chart}")
-            except Exception as e:
-                st.warning(f"Could not display chart: {e}")
+            chart_path = response.chart
+            st.write(f"Chart path: {chart_path}")  # Debugging: Display chart path
+            if os.path.exists(chart_path):
+                try:
+                    img = Image.open(chart_path)
+                    st.image(img, caption="Generated Chart")
+                except Exception as e:
+                    st.error(f"Could not display chart from path: {chart_path}. Error: {e}")
+            else:
+                st.warning(f"Chart file does not exist at: {chart_path}")
