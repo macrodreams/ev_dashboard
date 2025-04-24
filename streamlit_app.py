@@ -6,6 +6,8 @@ from pandasai import SmartDataframe
 from pandasai.llm import OpenAI
 import openai
 from PIL import Image
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Load environment variables
 load_dotenv()
@@ -107,70 +109,3 @@ Do not explain what you did — just return the clean result.
         ]
     )
     return response.choices[0].message.content.strip()
-
-# Sidebar with predefined questions
-st.sidebar.header("Predefined Analysis Questions")
-
-predefined_questions = {
-    "Location-Based Analysis": [
-        "Which cities have the highest number of EV stations?",
-        "List all vendors with station count in San Jose, CA, and show it in a bar chart.",
-        "What is the average rank of stations in each city?",
-    ],
-    "Vendor Performance Insights": [
-        "Which EV vendor has the most stations overall?",
-        "Show average review score for each EV vendor in descending order.",
-        "List all vendors and their total review count.",
-    ],
-    "Quality & Ranking": [
-        "Which vendor has the best average rank across all locations?",
-        "Which stations have the most user reviews? List top 5 with vendor and location.",
-    ],
-    "Risk/Complaint Indicators": [
-        "Summarize common user complaints based on reviews.",
-    ],
-    "Trends & Strategy": [
-        "Create a bar chart comparing total stations by vendor in California.",
-    ],
-}
-
-category = st.sidebar.selectbox("Select Category", list(predefined_questions.keys()))
-question = st.sidebar.radio(
-    "Choose a question:",
-    predefined_questions[category],
-    key="predefined_question"
-)
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("Or type your own question below:")
-
-# Main UI prompt box (pre-filled with selected question)
-user_prompt = st.text_area(
-    "Ask a question about the EV charging station data:",
-    value=question if question else "",
-    key="main_prompt_box"
-)
-
-if st.button("Submit Query") and user_prompt:
-    with st.spinner("Processing your query..."):
-        refined = refine_prompt(user_prompt)
-        st.info(f"Refined User Question: {refined}")  # Display the refined prompt in the Streamlit UI
-        response = EV_SmartDF.chat(refined)
-        final_response = clean_llm_output(response)
-    st.subheader("LLM Response:")
-    st.write(final_response)
-    # Try to display chart if present
-    if hasattr(response, 'chart') and response.chart:
-        chart_path = response.chart
-        st.write(f"Chart path: {chart_path}")  # Debugging: Log the chart path
-
-        # Check if the file exists at the given path
-        if os.path.exists(chart_path):
-            try:
-                # Open the image and display it using Streamlit
-                img = Image.open(chart_path)
-                st.image(img, caption="Generated Chart")
-            except Exception as e:
-                st.error(f"Could not display chart from path: {chart_path}. Error: {e}")
-        else:
-            st.warning(f"Chart file does not exist at: {chart_path}")
