@@ -170,9 +170,9 @@ if st.button("Submit Query") and user_prompt:
             # Display the table
             st.write(vendor_station_counts)
 
-            # Create a bar chart
+            # Create a bar chart dynamically
             fig, ax = plt.subplots(figsize=(10, 6))
-            ax.bar(vendor_station_counts['EV Vendor'], vendor_station_counts['Station Count'])
+            ax.bar(vendor_station_counts['EV Vendor'], vendor_station_counts['Station Count'], color='blue')
             ax.set_xlabel('EV Vendor')
             ax.set_ylabel('Number of Stations')
             ax.set_title('EV Vendors and Station Counts in California')
