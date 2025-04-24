@@ -9,7 +9,45 @@ import openai
 # Load environment variables
 load_dotenv()
 
-st.set_page_config(page_title="EV Charging Station Insights", layout="wide")
+st.set_page_config(page_title="EV Charging Station Insights", layout="wide", page_icon="⚡", initial_sidebar_state="expanded")
+
+# Inject dark theme and font color using Streamlit's theme config and custom CSS
+st.markdown(
+    """
+    <style>
+    /* Streamlit Dark Theme Tweaks */
+    body, .stApp {
+        background-color: #18191A;
+        color: #F5F6FA;
+    }
+    .stTextInput, .stTextArea, .stSelectbox, .stRadio, .stButton, .stSidebar, .stDataFrame, .stAlert, .stMarkdown {
+        color: #F5F6FA !important;
+        background-color: #23272F !important;
+    }
+    .stButton>button {
+        color: #fff;
+        background-color: #3A3B3C;
+        border-radius: 6px;
+        border: 1px solid #444;
+    }
+    .stButton>button:hover {
+        background-color: #444;
+    }
+    .stSidebar {
+        background-color: #23272F !important;
+    }
+    .css-1v0mbdj, .css-1d391kg, .css-1cpxqw2, .css-1offfwp, .css-1lcbmhc, .css-1b0udgb, .css-1kyxreq, .css-1n76uvr {
+        color: #F5F6FA !important;
+        background-color: #23272F !important;
+    }
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
+        color: #F5F6FA !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.title("EV Charging Station Insights (Google Maps Data)")
 
 # API Key setup (use .env or Streamlit secrets)
@@ -23,7 +61,7 @@ os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 DATA_PATH = os.path.join(os.path.dirname(__file__), "cleaned_ev_data.csv")
 if os.path.exists(DATA_PATH):
     EV_df = pd.read_csv(DATA_PATH)
-    st.success(f"Loaded {DATA_PATH} successfully!")
+    # Removed st.success message as requested
 else:
     st.error(f"Could not find {DATA_PATH}. Please ensure the file exists in the repository.")
     st.stop()
@@ -141,7 +179,7 @@ question = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("Or type your own question below:")
+st.sidebar.markdown("Or type your own question")
 
 # Main UI prompt box (pre-filled with selected question)
 user_prompt = st.text_area(
