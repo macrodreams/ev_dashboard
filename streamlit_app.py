@@ -132,5 +132,28 @@ if submit and final_prompt:
             st.write("Top 5 Cities with the Highest Growth Potential Based on Review Counts and Low Rank Values:")
             st.table(top_5_growth)
 
+        # Trend analysis for vendor performance across metro areas
+        elif "trends are emerging in vendor performance" in query or "what trends are emerging in vendor performance" in query:
+            # Trend in number of stations per vendor across major metro areas
+            vendor_station_trends = EV_df.groupby(['city', 'EV Vendor']).size().unstack(fill_value=0)
+            st.write("Trend in Station Counts per Vendor Across Major Metro Areas")
+            st.line_chart(vendor_station_trends)
+
+            # Trend in average review scores per vendor across major metro areas
+            vendor_review_trends = EV_df.groupby(['city', 'EV Vendor'])['totalScore'].mean().unstack(fill_value=0)
+            st.write("Trend in Average Review Scores per Vendor Across Major Metro Areas")
+            st.line_chart(vendor_review_trends)
+
+            # Rank trends across vendors in major cities
+            vendor_rank_trends = EV_df.groupby(['city', 'EV Vendor'])['rank'].mean().unstack(fill_value=0)
+            st.write("Trend in Vendor Rankings Across Major Metro Areas")
+            st.line_chart(vendor_rank_trends)
+
+            # Identify vendors expanding across multiple metro areas
+            city_vendor_counts = EV_df.groupby(['EV Vendor', 'city']).size().unstack(fill_value=0)
+            top_expanding_vendors = city_vendor_counts.sum(axis=1).sort_values(ascending=False).head(5)
+            st.write("Top 5 Vendors Expanding Across the Most Metro Areas")
+            st.bar_chart(top_expanding_vendors)
+
         else:
             st.warning("Query not recognized or not supported yet. Please rephrase or select a predefined option.")
