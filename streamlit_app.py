@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 from dotenv import load_dotenv
-from openai import OpenAI
 
 # Load environment variables
 load_dotenv()
@@ -60,17 +59,20 @@ question = st.sidebar.radio(
 st.sidebar.markdown("---")
 st.sidebar.markdown("Or type your own question below:")
 
-user_prompt = st.text_area(
-    "Ask a question about the EV charging station data:",
-    value=question if question else "",
+custom_question = st.sidebar.text_area(
+    "Ask a custom question about the EV charging station data:",
+    placeholder="e.g., Show station counts by vendor in Los Angeles, CA",
     key="main_prompt_box"
 )
 
-submit = st.button("Submit Query")
+# Choose which query to send — user typed one, or predefined
+final_prompt = custom_question.strip() if custom_question.strip() else question
 
-if submit and user_prompt:
+submit = st.sidebar.button("Submit Query")
+
+if submit and final_prompt:
     with st.spinner("Processing your query..."):
-        query = user_prompt.lower()
+        query = final_prompt.lower()
 
         if "highest number of ev stations" in query:
             city_counts = EV_df['city'].value_counts().head(10)
