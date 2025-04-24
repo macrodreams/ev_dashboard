@@ -11,40 +11,89 @@ load_dotenv()
 
 st.set_page_config(page_title="EV Charging Station Insights", layout="wide", page_icon="⚡", initial_sidebar_state="expanded")
 
-# Inject dark theme and font color using Streamlit's theme config and custom CSS
+# Inject modern, professional dark theme CSS
 st.markdown(
     """
     <style>
-    /* Streamlit Dark Theme Tweaks */
+    /* Base dark background */
     body, .stApp {
-        background-color: #18191A;
-        color: #F5F6FA;
+        background-color: #111217;
+        color: #ECECEC;
+        font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     }
-    .stTextInput, .stTextArea, .stSelectbox, .stRadio, .stButton, .stSidebar, .stDataFrame, .stAlert, .stMarkdown {
-        color: #F5F6FA !important;
-        background-color: #23272F !important;
+    /* Headings - bold, modern, high contrast */
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6, h1, h2, h3, h4, h5, h6 {
+        color: #FFF;
+        font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.01em;
     }
+    /* Sidebar styling */
+    .stSidebar {
+        background-color: #18191F !important;
+        box-shadow: 2px 0 8px 0 rgba(0,0,0,0.25);
+    }
+    /* Inputs and text areas */
+    .stTextInput, .stTextArea, .stSelectbox, .stRadio, .stDataFrame, .stAlert, .stMarkdown {
+        color: #ECECEC !important;
+        background-color: #18191F !important;
+        border-radius: 8px;
+        border: 1px solid #23232B !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    }
+    /* Button styling */
     .stButton>button {
-        color: #fff;
-        background-color: #3A3B3C;
-        border-radius: 6px;
-        border: 1px solid #444;
+        color: #FFF;
+        background: linear-gradient(90deg, #FF8800 0%, #FFB347 100%);
+        border-radius: 8px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(255,136,0,0.10);
+        font-weight: 600;
+        transition: background 0.2s, box-shadow 0.2s;
     }
     .stButton>button:hover {
-        background-color: #444;
+        background: linear-gradient(90deg, #FFB347 0%, #FF8800 100%);
+        box-shadow: 0 4px 16px rgba(255,136,0,0.18);
     }
-    .stSidebar {
-        background-color: #23272F !important;
+    /* Highlight for selected prompts/questions */
+    .stRadio [aria-checked="true"] {
+        background: #FF8800 !important;
+        color: #FFF !important;
+        border-radius: 6px;
+        font-weight: 600;
+        box-shadow: 0 1px 8px rgba(255,136,0,0.10);
     }
-    .css-1v0mbdj, .css-1d391kg, .css-1cpxqw2, .css-1offfwp, .css-1lcbmhc, .css-1b0udgb, .css-1kyxreq, .css-1n76uvr {
-        color: #F5F6FA !important;
-        background-color: #23272F !important;
+    /* Chart backgrounds and accent border */
+    .element-container svg, .stPlotlyChart, .stAltairChart, .stVegaLiteChart, .stPyplot {
+        background-color: #18191F !important;
+        border-radius: 10px;
+        border: 2px solid #00B8A9;
+        box-shadow: 0 2px 12px rgba(0,184,169,0.10);
+        padding: 12px;
     }
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
-        color: #F5F6FA !important;
+    /* Accent color for links and highlights */
+    a, .accent, .stMarkdown a {
+        color: #00B8A9 !important;
+        font-weight: 600;
+    }
+    /* Subtle shadow for cards/containers */
+    .stContainer, .stAlert, .stDataFrame {
+        box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+        border-radius: 10px;
     }
     </style>
+    <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
     """,
+    unsafe_allow_html=True
+)
+
+# Place logo in the top-right corner using absolute positioning
+st.markdown(
+    f'''
+    <div style="position: absolute; top: 1.5rem; right: 2.5rem; z-index: 100;">
+        <img src="file://{os.path.join(os.path.dirname(__file__), 'EV ChargeInsight logo.png')}" alt="EV ChargeInsight Logo" style="height:56px; border-radius:10px; box-shadow:0 2px 8px rgba(0,184,169,0.16); background: #23272F; padding: 4px;"/>
+    </div>
+    ''',
     unsafe_allow_html=True
 )
 
