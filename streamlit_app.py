@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from pandasai import SmartDataframe
 from pandasai.llm import OpenAI
 import openai
-import matplotlib.pyplot as plt
 
 # Load environment variables
 load_dotenv()
@@ -57,25 +56,32 @@ Your job is to reduce token usage while delivering actionable insights.
 llm = OpenAI(Model="GPT-4o")
 EV_SmartDF = SmartDataframe(EV_df, config={"llm": llm, "system_message": system_prompt})
 
+# Function to handle large inputs and truncate if necessary
 def refine_prompt(user_prompt):
+    max_tokens = 8000  # Set a safe token limit to avoid hitting the max
+    # If the user prompt exceeds the token limit, truncate it
+    if len(user_prompt.split()) > max_tokens:
+        user_prompt = ' '.join(user_prompt.split()[:max_tokens])
+
+    # Proceed with refining the prompt
     client = OpenAI()
     system_instruction = """
-You are a data analyst assistant helping refine user questions for a SmartDataframe
-containing EV charging station data from Google Maps.
+    You are a data analyst assistant helping refine user questions for a SmartDataframe
+    containing EV charging station data from Google Maps.
 
-Your job is to make the user query more specific and compatible with querying columns like:
-- EV Vendor
-- city
-- rank
-- totalScore
-- reviewsCount
-- categoryName
+    Your job is to make the user query more specific and compatible with querying columns like:
+    - EV Vendor
+    - city
+    - rank
+    - totalScore
+    - reviewsCount
+    - categoryName
 
-When the user asks for the number of EV stations per vendor in California, ensure that the prompt is clear 
-and asks the model to process the vendor and station data in a summarized way (using groupby or similar operations).
+    When the user asks for the number of EV stations per vendor in California, ensure that the prompt is clear 
+    and asks the model to process the vendor and station data in a summarized way (using groupby or similar operations).
 
-Return only the improved prompt. Do NOT explain or comment.
-"""
+    Return only the improved prompt. Do NOT explain or comment.
+    """
     response = openai.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -88,22 +94,22 @@ Return only the improved prompt. Do NOT explain or comment.
 def clean_llm_output(raw_output):
     client = OpenAI()
     system_instruction = """
-You are a cleanup assistant for an AI data chatbot.
+    You are a cleanup assistant for an AI data chatbot.
 
-You are given raw LLM output which might include logs, errors, tracebacks, retries, or system warnings.
-Your job is to extract and return only the clean, relevant answer for the user.
+    You are given raw LLM output which might include logs, errors, tracebacks, retries, or system warnings.
+    Your job is to extract and return only the clean, relevant answer for the user.
 
-If a chart or table is included, describe it briefly or return it cleanly.
-Ignore any lines like:
-- ERROR:...
-- WARNING:...
-- Traceback...
-- Retry number...
-- ModuleNotFoundError...
-- Any internal PandasAI or matplotlib error logs
+    If a chart or table is included, describe it briefly or return it cleanly.
+    Ignore any lines like:
+    - ERROR:...
+    - WARNING:...
+    - Traceback...
+    - Retry number...
+    - ModuleNotFoundError...
+    - Any internal PandasAI or matplotlib error logs
 
-Do not explain what you did — just return the clean result.
-"""
+    Do not explain what you did — just return the clean result.
+    """
     safe_output = str(raw_output)
     response = openai.chat.completions.create(
         model="gpt-4o",
@@ -159,46 +165,25 @@ user_prompt = st.text_area(
 
 if st.button("Submit Query") and user_prompt:
     with st.spinner("Processing your query..."):
-        if "compare total stations by vendor in california" in user_prompt.lower():
-            # Filter for California data
-            california_df = EV_df[EV_df['state'] == 'CA']
-
-            # Group by vendor and count the stations
-            vendor_station_counts = california_df.groupby('EV Vendor').size().reset_index(name='Station Count')
-            vendor_station_counts = vendor_station_counts.sort_values('Station Count', ascending=False)
-
-            # Display the table
-            st.write(vendor_station_counts)
-
-            # Create a bar chart dynamically
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.bar(vendor_station_counts['EV Vendor'], vendor_station_counts['Station Count'], color='blue')
-            ax.set_xlabel('EV Vendor')
-            ax.set_ylabel('Number of Stations')
-            ax.set_title('EV Vendors and Station Counts in California')
-            plt.xticks(rotation=45, ha='right')
-            st.pyplot(fig)
-        else:
-            refined = refine_prompt(user_prompt)
-            st.info(f"Refined User Question: {refined}")  # Display the refined prompt in the Streamlit UI
-            response = EV_SmartDF.chat(refined)
-            final_response = clean_llm_output(response)
-            st.subheader("LLM Response:")
-            st.write(final_response)
-
-            # Try to display chart if present
-            if hasattr(response, 'chart') and response.chart is not None:
-                try:
-                    import matplotlib.figure
-                    if isinstance(response.chart, matplotlib.figure.Figure):
-                        st.pyplot(response.chart)
-                    elif isinstance(response.chart, str) and (response.chart.endswith('.png') or response.chart.endswith('.jpg')):
-                        from PIL import Image
-                        import os
-                        if os.path.exists(response.chart):
-                            img = Image.open(response.chart)
-                            st.image(img, caption="Generated Chart")
-                        else:
-                            st.warning(f"Chart image file not found: {response.chart}")
-                except Exception as e:
-                    st.warning(f"Could not display chart: {e}")
+        refined = refine_prompt(user_prompt)
+        st.info(f"Refined User Question: {refined}")  # Display the refined prompt in the Streamlit UI
+        response = EV_SmartDF.chat(refined)
+        final_response = clean_llm_output(response)
+    st.subheader("LLM Response:")
+    st.write(final_response)
+    # Try to display chart if present
+    if hasattr(response, 'chart') and response.chart is not None:
+        try:
+            import matplotlib.figure
+            if isinstance(response.chart, matplotlib.figure.Figure):
+                st.pyplot(response.chart)
+            elif isinstance(response.chart, str) and (response.chart.endswith('.png') or response.chart.endswith('.jpg')):
+                from PIL import Image
+                import os
+                if os.path.exists(response.chart):
+                    img = Image.open(response.chart)
+                    st.image(img, caption="Generated Chart")
+                else:
+                    st.warning(f"Chart image file not found: {response.chart}")
+        except Exception as e:
+            st.warning(f"Could not display chart: {e}")
