@@ -1,5 +1,6 @@
 streamlit
 pandas==2.2.3
+seaborn
 pandasai
 dotenv
 openai
