@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from pandasai import SmartDataframe
 from pandasai.llm import OpenAI
 import openai
-import matplotlib
 from PIL import Image
 
 # Load environment variables
@@ -156,27 +155,22 @@ if st.button("Submit Query") and user_prompt:
     with st.spinner("Processing your query..."):
         refined = refine_prompt(user_prompt)
         st.info(f"Refined User Question: {refined}")  # Display the refined prompt in the Streamlit UI
-        try:
-            response = EV_SmartDF.chat(refined)
-            st.write(f"Raw Response from LLM: {response}")  # Debugging: Log the raw response
-            final_response = clean_llm_output(response)
-        except Exception as e:
-            st.error(f"Error occurred during query execution: {e}")
-            final_response = None
+        response = EV_SmartDF.chat(refined)
+        final_response = clean_llm_output(response)
+    st.subheader("LLM Response:")
+    st.write(final_response)
+    # Try to display chart if present
+    if hasattr(response, 'chart') and response.chart:
+        chart_path = response.chart
+        st.write(f"Chart path: {chart_path}")  # Debugging: Log the chart path
 
-    if final_response:
-        st.subheader("LLM Response:")
-        st.write(final_response)
-        
-        # Check if the response contains a chart (like a PNG or JPG file)
-        if hasattr(response, 'chart') and response.chart:
-            chart_path = response.chart
-            st.write(f"Chart path: {chart_path}")  # Debugging: Display chart path
-            if os.path.exists(chart_path):
-                try:
-                    img = Image.open(chart_path)
-                    st.image(img, caption="Generated Chart")
-                except Exception as e:
-                    st.error(f"Could not display chart from path: {chart_path}. Error: {e}")
-            else:
-                st.warning(f"Chart file does not exist at: {chart_path}")
+        # Check if the file exists at the given path
+        if os.path.exists(chart_path):
+            try:
+                # Open the image and display it using Streamlit
+                img = Image.open(chart_path)
+                st.image(img, caption="Generated Chart")
+            except Exception as e:
+                st.error(f"Could not display chart from path: {chart_path}. Error: {e}")
+        else:
+            st.warning(f"Chart file does not exist at: {chart_path}")
