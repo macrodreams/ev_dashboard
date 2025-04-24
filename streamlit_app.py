@@ -9,6 +9,7 @@ import openai
 # Load environment variables
 load_dotenv()
 
+# Set Streamlit page configuration
 st.set_page_config(page_title="EV Charging Station Insights", layout="wide")
 st.title("EV Charging Station Insights (Google Maps Data)")
 
@@ -19,7 +20,7 @@ if not OPENAI_API_KEY:
     st.stop()
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
-# File loader: load from repo instead of upload
+# Load EV charging station data (ensure the file exists)
 DATA_PATH = os.path.join(os.path.dirname(__file__), "cleaned_ev_data.csv")
 if os.path.exists(DATA_PATH):
     EV_df = pd.read_csv(DATA_PATH)
@@ -28,6 +29,7 @@ else:
     st.error(f"Could not find {DATA_PATH}. Please ensure the file exists in the repository.")
     st.stop()
 
+# System prompt to guide the LLM behavior for querying data
 system_prompt = """
 You are a data assistant for an electric vehicle (EV) charging station dashboard.
 
@@ -53,26 +55,22 @@ Charts or tables must reference filtered data, not full dumps.
 Your job is to reduce token usage while delivering actionable insights.
 """
 
+# Initialize the LLM for querying
 llm = OpenAI(Model="GPT-4o")
 EV_SmartDF = SmartDataframe(EV_df, config={"llm": llm, "system_message": system_prompt})
 
+# Refine user prompt for LLM
 def refine_prompt(user_prompt):
     client = OpenAI()
     system_instruction = """
 You are a data analyst assistant helping refine user questions for a SmartDataframe
 containing EV charging station data from Google Maps.
 
-Your job is to make the user query more specific and compatible with querying columns like:
-- EV Vendor
-- city
-- rank
-- totalScore
-- reviewsCount
-- categoryName
-
-When the user asks for the number of EV stations per city, ensure that the prompt is clear 
-and asks the model to process the city and station data in a summarized way (using groupby or similar operations).
-
+Make the prompt specific, concise, and compatible with PandasAI.
+Avoid using advanced or restricted matplotlib methods like 'tight_layout' or 'gca'.
+Prefer simple operations like group by, counts, averages, bar/line plots.
+Use field names like: EV Vendor, city, state, rank, totalScore, reviewsCount, etc.
+Format the prompt clearly and naturally for LLM data querying.
 Return only the improved prompt. Do NOT explain or comment.
 """
     response = openai.chat.completions.create(
@@ -84,6 +82,7 @@ Return only the improved prompt. Do NOT explain or comment.
     )
     return response.choices[0].message.content.strip()
 
+# Clean LLM output to extract the relevant answer
 def clean_llm_output(raw_output):
     client = OpenAI()
     system_instruction = """
@@ -113,7 +112,7 @@ Do not explain what you did — just return the clean result.
     )
     return response.choices[0].message.content.strip()
 
-# Sidebar with predefined questions
+# Sidebar with predefined analysis questions
 st.sidebar.header("Predefined Analysis Questions")
 
 predefined_questions = {
@@ -139,6 +138,7 @@ predefined_questions = {
     ],
 }
 
+# Sidebar selection for category and specific question
 category = st.sidebar.selectbox("Select Category", list(predefined_questions.keys()))
 question = st.sidebar.radio(
     "Choose a question:",
@@ -146,6 +146,7 @@ question = st.sidebar.radio(
     key="predefined_question"
 )
 
+# Allow user to input their own question
 st.sidebar.markdown("---")
 st.sidebar.markdown("Or type your own question below:")
 
@@ -156,35 +157,36 @@ user_prompt = st.text_area(
     key="main_prompt_box"
 )
 
+# Submit button to trigger the query
 if st.button("Submit Query") and user_prompt:
     with st.spinner("Processing your query..."):
-        # If the user asks about the highest number of EV stations by city
-        if "highest number of ev stations" in user_prompt.lower():
-            # Group data by city and count the number of EV stations
-            city_station_counts = EV_df.groupby('city')['EV Vendor'].count().reset_index()
-            city_station_counts = city_station_counts.sort_values('EV Vendor', ascending=False)
-            st.write(city_station_counts)
-        else:
-            refined = refine_prompt(user_prompt)
-            st.info(f"Refined User Question: {refined}")  # Display the refined prompt in the Streamlit UI
-            response = EV_SmartDF.chat(refined)
-            final_response = clean_llm_output(response)
-            st.subheader("LLM Response:")
-            st.write(final_response)
+        # Refine the user's question
+        refined = refine_prompt(user_prompt)
+        st.info(f"Refined User Question: {refined}")  # Display the refined prompt in the Streamlit UI
 
-            # Try to display chart if present
-            if hasattr(response, 'chart') and response.chart is not None:
-                try:
-                    import matplotlib.figure
-                    if isinstance(response.chart, matplotlib.figure.Figure):
-                        st.pyplot(response.chart)
-                    elif isinstance(response.chart, str) and (response.chart.endswith('.png') or response.chart.endswith('.jpg')):
-                        from PIL import Image
-                        import os
-                        if os.path.exists(response.chart):
-                            img = Image.open(response.chart)
-                            st.image(img, caption="Generated Chart")
-                        else:
-                            st.warning(f"Chart image file not found: {response.chart}")
-                except Exception as e:
-                    st.warning(f"Could not display chart: {e}")
+        # Query the SmartDataFrame with the refined prompt
+        response = EV_SmartDF.chat(refined)
+        
+        # Clean the raw output from the LLM
+        final_response = clean_llm_output(response)
+    
+    # Display the LLM response
+    st.subheader("LLM Response:")
+    st.write(final_response)
+
+    # Try to display chart if present
+    if hasattr(response, 'chart') and response.chart is not None:
+        try:
+            import matplotlib.figure
+            if isinstance(response.chart, matplotlib.figure.Figure):
+                st.pyplot(response.chart)
+            elif isinstance(response.chart, str) and (response.chart.endswith('.png') or response.chart.endswith('.jpg')):
+                from PIL import Image
+                import os
+                if os.path.exists(response.chart):
+                    img = Image.open(response.chart)
+                    st.image(img, caption="Generated Chart")
+                else:
+                    st.warning(f"Chart image file not found: {response.chart}")
+        except Exception as e:
+            st.warning(f"Could not display chart: {e}")
