@@ -28,6 +28,10 @@ else:
     st.error(f"Could not find {DATA_PATH}. Please ensure the file exists in the repository.")
     st.stop()
 
+if EV_df is None or EV_df.empty:
+    st.error("The dataset is empty or failed to load properly.")
+    st.stop()
+
 system_prompt = """
 You are a data assistant for an electric vehicle (EV) charging station dashboard.
 
@@ -167,23 +171,29 @@ if st.button("Submit Query") and user_prompt:
     with st.spinner("Processing your query..."):
         refined = refine_prompt(user_prompt)
         st.info(f"Refined User Question: {refined}")  # Display the refined prompt in the Streamlit UI
-        response = EV_SmartDF.chat(refined)
-        final_response = clean_llm_output(response)
-    st.subheader("LLM Response:")
-    st.write(final_response)
-    # Try to display chart if present
-    if hasattr(response, 'chart') and response.chart is not None:
         try:
-            import matplotlib.figure
-            if isinstance(response.chart, matplotlib.figure.Figure):
-                st.pyplot(response.chart)
-            elif isinstance(response.chart, str) and (response.chart.endswith('.png') or response.chart.endswith('.jpg')):
-                from PIL import Image
-                import os
-                if os.path.exists(response.chart):
-                    img = Image.open(response.chart)
-                    st.image(img, caption="Generated Chart")
-                else:
-                    st.warning(f"Chart image file not found: {response.chart}")
+            response = EV_SmartDF.chat(refined)
+            final_response = clean_llm_output(response)
         except Exception as e:
-            st.warning(f"Could not display chart: {e}")
+            st.error(f"Error occurred during query execution: {e}")
+            final_response = None
+
+    if final_response:
+        st.subheader("LLM Response:")
+        st.write(final_response)
+        # Try to display chart if present
+        if hasattr(response, 'chart') and response.chart is not None:
+            try:
+                import matplotlib.figure
+                if isinstance(response.chart, matplotlib.figure.Figure):
+                    st.pyplot(response.chart)
+                elif isinstance(response.chart, str) and (response.chart.endswith('.png') or response.chart.endswith('.jpg')):
+                    from PIL import Image
+                    import os
+                    if os.path.exists(response.chart):
+                        img = Image.open(response.chart)
+                        st.image(img, caption="Generated Chart")
+                    else:
+                        st.warning(f"Chart image file not found: {response.chart}")
+            except Exception as e:
+                st.warning(f"Could not display chart: {e}")
