@@ -71,8 +71,8 @@ Your job is to make the user query more specific and compatible with querying co
 - reviewsCount
 - categoryName
 
-When the user asks for the number of EV stations per city, ensure that the prompt is clear 
-and asks the model to process the city and station data in a summarized way (using groupby or similar operations).
+When the user asks for the number of EV stations per vendor in California, ensure that the prompt is clear 
+and asks the model to process the vendor and station data in a summarized way (using groupby or similar operations).
 
 Return only the improved prompt. Do NOT explain or comment.
 """
@@ -159,12 +159,12 @@ user_prompt = st.text_area(
 
 if st.button("Submit Query") and user_prompt:
     with st.spinner("Processing your query..."):
-        if "list all vendors with station count in san jose, ca" in user_prompt.lower():
-            # Filter for San Jose, CA data
-            san_jose_df = EV_df[(EV_df['city'] == 'San Jose') & (EV_df['state'] == 'CA')]
+        if "compare total stations by vendor in california" in user_prompt.lower():
+            # Filter for California data
+            california_df = EV_df[EV_df['state'] == 'CA']
 
             # Group by vendor and count the stations
-            vendor_station_counts = san_jose_df.groupby('EV Vendor').size().reset_index(name='Station Count')
+            vendor_station_counts = california_df.groupby('EV Vendor').size().reset_index(name='Station Count')
             vendor_station_counts = vendor_station_counts.sort_values('Station Count', ascending=False)
 
             # Display the table
@@ -175,7 +175,7 @@ if st.button("Submit Query") and user_prompt:
             ax.bar(vendor_station_counts['EV Vendor'], vendor_station_counts['Station Count'])
             ax.set_xlabel('EV Vendor')
             ax.set_ylabel('Number of Stations')
-            ax.set_title('EV Vendors and Station Counts in San Jose, CA')
+            ax.set_title('EV Vendors and Station Counts in California')
             plt.xticks(rotation=45, ha='right')
             st.pyplot(fig)
         else:
