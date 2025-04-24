@@ -81,12 +81,20 @@ if submit and final_prompt:
             st.bar_chart(city_counts)
 
         elif "station count in san jose" in query:
+            # Filter for stations in San Jose, CA
             san_jose_df = EV_df[(EV_df['city'].str.lower() == "san jose") & (EV_df['state'].str.upper() == "CA")]
+            
+            # Count the number of stations for each vendor in San Jose
             vendor_counts = san_jose_df['EV Vendor'].value_counts()
+            
+            # Create the bar chart to display the station count per vendor
             fig, ax = plt.subplots()
             sns.barplot(x=vendor_counts.values, y=vendor_counts.index, ax=ax)
             ax.set_title("EV Station Counts by Vendor in San Jose, CA")
+            ax.set_xlabel("Station Count")
+            ax.set_ylabel("Vendor")
             st.pyplot(fig)
+
 
         elif "average rank of stations in each city" in query:
             avg_rank = EV_df.groupby('city')['rank'].mean().sort_values()
