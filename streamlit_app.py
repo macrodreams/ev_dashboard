@@ -35,7 +35,6 @@ predefined_questions = {
         "Which cities have the highest number of EV stations?",
         "List all vendors with station count in San Jose, CA, and show it in a bar chart.",
         "What is the average rank of stations in each city?",
-        "Show a dynamic dual bar chart of top EV vendors and neighborhoods by station count."
     ],
     "Vendor Performance Insights": [
         "Which EV vendor has the most stations overall?",
@@ -55,7 +54,6 @@ category = st.sidebar.selectbox("Select Category", list(predefined_questions.key
 question = st.sidebar.radio(
     "Choose a question:",
     predefined_questions[category],
-    index=predefined_questions[category].index("Show a dynamic dual bar chart of top EV vendors and neighborhoods by station count.") if "Show a dynamic dual bar chart of top EV vendors and neighborhoods by station count." in predefined_questions[category] else 0,
     key="predefined_question"
 )
 
@@ -68,22 +66,6 @@ user_prompt = st.text_area(
     key="main_prompt_box"
 )
 
-# Filters for charting
-st.sidebar.markdown("---")
-st.sidebar.header("Filter Data")
-selected_state = st.sidebar.selectbox("Select State", ["All"] + sorted(EV_df['state'].dropna().unique().tolist()))
-selected_city = st.sidebar.selectbox("Select City", ["All"] + sorted(EV_df['city'].dropna().unique().tolist()))
-selected_vendor = st.sidebar.selectbox("Select Vendor", ["All"] + sorted(EV_df['EV Vendor'].dropna().unique().tolist()))
-
-# Apply filters
-filtered_df = EV_df.copy()
-if selected_state != "All":
-    filtered_df = filtered_df[filtered_df['state'] == selected_state]
-if selected_city != "All":
-    filtered_df = filtered_df[filtered_df['city'] == selected_city]
-if selected_vendor != "All":
-    filtered_df = filtered_df[filtered_df['EV Vendor'] == selected_vendor]
-
 submit = st.button("Submit Query")
 
 if submit and user_prompt:
@@ -91,11 +73,11 @@ if submit and user_prompt:
         query = user_prompt.lower()
 
         if "highest number of ev stations" in query:
-            city_counts = filtered_df['city'].value_counts().head(10)
+            city_counts = EV_df['city'].value_counts().head(10)
             st.bar_chart(city_counts)
 
         elif "station count in san jose" in query:
-            san_jose_df = filtered_df[(filtered_df['city'].str.lower() == "san jose") & (filtered_df['state'].str.upper() == "CA")]
+            san_jose_df = EV_df[(EV_df['city'].str.lower() == "san jose") & (EV_df['state'].str.upper() == "CA")]
             vendor_counts = san_jose_df['EV Vendor'].value_counts()
             fig, ax = plt.subplots()
             sns.barplot(x=vendor_counts.values, y=vendor_counts.index, ax=ax)
@@ -103,45 +85,35 @@ if submit and user_prompt:
             st.pyplot(fig)
 
         elif "average rank of stations in each city" in query:
-            avg_rank = filtered_df.groupby('city')['rank'].mean().sort_values()
+            avg_rank = EV_df.groupby('city')['rank'].mean().sort_values()
             st.bar_chart(avg_rank.head(10))
 
         elif "most stations overall" in query:
-            vendor_counts = filtered_df['EV Vendor'].value_counts()
+            vendor_counts = EV_df['EV Vendor'].value_counts()
             st.bar_chart(vendor_counts.head(10))
 
         elif "average review score for each ev vendor" in query:
-            avg_scores = filtered_df.groupby('EV Vendor')['totalScore'].mean().sort_values(ascending=False)
+            avg_scores = EV_df.groupby('EV Vendor')['totalScore'].mean().sort_values(ascending=False)
             st.bar_chart(avg_scores.head(10))
 
         elif "total review count" in query:
-            total_reviews = filtered_df.groupby('EV Vendor')['reviewsCount'].sum().sort_values(ascending=False)
+            total_reviews = EV_df.groupby('EV Vendor')['reviewsCount'].sum().sort_values(ascending=False)
             st.bar_chart(total_reviews.head(10))
 
         elif "best average rank" in query:
-            best_rank = filtered_df.groupby('EV Vendor')['rank'].mean().sort_values()
+            best_rank = EV_df.groupby('EV Vendor')['rank'].mean().sort_values()
             st.bar_chart(best_rank.head(10))
 
         elif "most user reviews" in query:
-            top_reviews = filtered_df[['EV Vendor', 'location', 'reviewsCount']].sort_values(by='reviewsCount', ascending=False).head(5)
+            top_reviews = EV_df[['EV Vendor', 'location', 'reviewsCount']].sort_values(by='reviewsCount', ascending=False).head(5)
             st.table(top_reviews)
 
         elif "total stations by vendor in california" in query:
-            ca_df = filtered_df[filtered_df['state'].str.upper() == "CA"]
+            ca_df = EV_df[EV_df['state'].str.upper() == "CA"]
             ca_vendor_counts = ca_df['EV Vendor'].value_counts()
             fig, ax = plt.subplots()
             sns.barplot(x=ca_vendor_counts.values, y=ca_vendor_counts.index, ax=ax)
             ax.set_title("EV Stations by Vendor in California")
-            st.pyplot(fig)
-
-        elif "dual bar chart" in query:
-            top_vendors = filtered_df['EV Vendor'].value_counts().head(5)
-            top_hoods = filtered_df['neighbourhood'].value_counts().head(5)
-            fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-            sns.barplot(y=top_vendors.index, x=top_vendors.values, ax=axes[0], palette="viridis")
-            axes[0].set_title("Top EV Vendors by Station Count")
-            sns.barplot(y=top_hoods.index, x=top_hoods.values, ax=axes[1], palette="magma")
-            axes[1].set_title("Top Neighborhoods by Station Count")
             st.pyplot(fig)
 
         else:
