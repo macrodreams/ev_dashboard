@@ -178,5 +178,21 @@ if submit and final_prompt:
             st.write("Vendors with Presence Across the Most Number of Cities:")
             st.table(vendor_city_count.head(10))
 
+        # New logic for states showing the fastest growth in EV station count
+        elif "which states show the fastest growth in ev station count" in query:
+            # Ensure there is a 'year' column (or create one based on the 'date' column if it exists)
+            if 'date' in EV_df.columns:
+                EV_df['year'] = pd.to_datetime(EV_df['date']).dt.year
+            
+            # Group by state and year, then count the number of stations each year per state
+            state_yearly_counts = EV_df.groupby(['state', 'year']).size().unstack(fill_value=0)
+            
+            # Calculate the growth rate (percentage change) for each state
+            state_growth = state_yearly_counts.pct_change(axis='columns').mean(axis=1).sort_values(ascending=False)
+            
+            # Display the states with the fastest growth
+            st.write("States Showing the Fastest Growth in EV Station Count:")
+            st.table(state_growth.head(10))
+
         else:
             st.warning("Query not recognized or not supported yet. Please rephrase or select a predefined option.")
