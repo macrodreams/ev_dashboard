@@ -155,5 +155,19 @@ if submit and final_prompt:
             st.write("Top 5 Vendors Expanding Across the Most Metro Areas")
             st.bar_chart(top_expanding_vendors)
 
+        # New logic for vendors consistently scoring high across multiple cities
+        elif "which vendors consistently score high across multiple cities" in query:
+            # Calculate average review scores and ranks for each vendor across all cities
+            vendor_scores = EV_df.groupby('EV Vendor').agg(
+                avg_score=('totalScore', 'mean'),
+                avg_rank=('rank', 'mean')
+            )
+
+            # Filter vendors with consistently high scores (e.g., avg_score > 4) and low average ranks (e.g., avg_rank < 3)
+            consistent_vendors = vendor_scores[(vendor_scores['avg_score'] > 4) & (vendor_scores['avg_rank'] < 3)]
+            
+            st.write("Vendors with Consistently High Scores Across Multiple Cities:")
+            st.table(consistent_vendors)
+
         else:
             st.warning("Query not recognized or not supported yet. Please rephrase or select a predefined option.")
