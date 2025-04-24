@@ -4,3 +4,4 @@ pandasai
 dotenv
 openai
 matplotlib
+pyyaml
