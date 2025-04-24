@@ -4,8 +4,8 @@ import os
 from dotenv import load_dotenv
 import openai
 
-# Load environment variables
-load_dotenv()
+# Set page configuration first
+st.set_page_config(page_title="EV Charging Station Insights", layout="wide")
 
 # Add theme toggle
 theme = st.radio("Select Theme", ["Light", "Dark"])
@@ -35,7 +35,9 @@ else:
     </style>
     """, unsafe_allow_html=True)
 
-st.set_page_config(page_title="EV Charging Station Insights", layout="wide")
+# Load environment variables
+load_dotenv()
+
 st.title("EV Charging Station Insights (Google Maps Data)")
 
 # API Key setup (use .env or Streamlit secrets)
