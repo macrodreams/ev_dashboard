@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from pandasai import SmartDataframe
 from pandasai.llm import OpenAI
 import openai
+import matplotlib
+from PIL import Image
 
 # Load environment variables
 load_dotenv()
@@ -26,10 +28,6 @@ if os.path.exists(DATA_PATH):
     st.success(f"Loaded {DATA_PATH} successfully!")
 else:
     st.error(f"Could not find {DATA_PATH}. Please ensure the file exists in the repository.")
-    st.stop()
-
-if EV_df is None or EV_df.empty:
-    st.error("The dataset is empty or failed to load properly.")
     st.stop()
 
 system_prompt = """
@@ -60,32 +58,19 @@ Your job is to reduce token usage while delivering actionable insights.
 llm = OpenAI(Model="GPT-4o")
 EV_SmartDF = SmartDataframe(EV_df, config={"llm": llm, "system_message": system_prompt})
 
-# Function to handle large inputs and truncate if necessary
 def refine_prompt(user_prompt):
-    max_tokens = 8000  # Set a safe token limit to avoid hitting the max
-    # If the user prompt exceeds the token limit, truncate it
-    if len(user_prompt.split()) > max_tokens:
-        user_prompt = ' '.join(user_prompt.split()[:max_tokens])
-
-    # Proceed with refining the prompt
     client = OpenAI()
     system_instruction = """
-    You are a data analyst assistant helping refine user questions for a SmartDataframe
-    containing EV charging station data from Google Maps.
+You are a data analyst assistant helping refine user questions for a SmartDataframe
+containing EV charging station data from Google Maps.
 
-    Your job is to make the user query more specific and compatible with querying columns like:
-    - EV Vendor
-    - city
-    - rank
-    - totalScore
-    - reviewsCount
-    - categoryName
-
-    When the user asks for the number of EV stations per vendor in California, ensure that the prompt is clear 
-    and asks the model to process the vendor and station data in a summarized way (using groupby or similar operations).
-
-    Return only the improved prompt. Do NOT explain or comment.
-    """
+Make the prompt specific, concise, and compatible with PandasAI.
+Avoid using advanced or restricted matplotlib methods like 'tight_layout' or 'gca'.
+Prefer simple operations like group by, counts, averages, bar/line plots.
+Use field names like: EV Vendor, city, state, rank, totalScore, reviewsCount, etc.
+Format the prompt clearly and naturally for LLM data querying.
+Return only the improved prompt. Do NOT explain or comment.
+"""
     response = openai.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -98,22 +83,22 @@ def refine_prompt(user_prompt):
 def clean_llm_output(raw_output):
     client = OpenAI()
     system_instruction = """
-    You are a cleanup assistant for an AI data chatbot.
+You are a cleanup assistant for an AI data chatbot.
 
-    You are given raw LLM output which might include logs, errors, tracebacks, retries, or system warnings.
-    Your job is to extract and return only the clean, relevant answer for the user.
+You are given raw LLM output which might include logs, errors, tracebacks, retries, or system warnings.
+Your job is to extract and return only the clean, relevant answer for the user.
 
-    If a chart or table is included, describe it briefly or return it cleanly.
-    Ignore any lines like:
-    - ERROR:...
-    - WARNING:...
-    - Traceback...
-    - Retry number...
-    - ModuleNotFoundError...
-    - Any internal PandasAI or matplotlib error logs
+If a chart or table is included, describe it briefly or return it cleanly.
+Ignore any lines like:
+- ERROR:...
+- WARNING:...
+- Traceback...
+- Retry number...
+- ModuleNotFoundError...
+- Any internal PandasAI or matplotlib error logs
 
-    Do not explain what you did — just return the clean result.
-    """
+Do not explain what you did — just return the clean result.
+"""
     safe_output = str(raw_output)
     response = openai.chat.completions.create(
         model="gpt-4o",
@@ -181,15 +166,18 @@ if st.button("Submit Query") and user_prompt:
     if final_response:
         st.subheader("LLM Response:")
         st.write(final_response)
-        # Try to display chart if present
-        if hasattr(response, 'chart') and response.chart is not None:
+        
+        # Check if the response contains a chart (like a PNG or JPG file)
+        if hasattr(response, 'chart') and response.chart:
             try:
                 import matplotlib.figure
                 if isinstance(response.chart, matplotlib.figure.Figure):
+                    # Display the figure directly if it's a Matplotlib object
                     st.pyplot(response.chart)
                 elif isinstance(response.chart, str) and (response.chart.endswith('.png') or response.chart.endswith('.jpg')):
                     from PIL import Image
                     import os
+                    # Check if the chart file exists and render it
                     if os.path.exists(response.chart):
                         img = Image.open(response.chart)
                         st.image(img, caption="Generated Chart")
