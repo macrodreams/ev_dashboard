@@ -2,13 +2,8 @@ import streamlit as st
 from transformers import pipeline
 import matplotlib.pyplot as plt
 
-# Cache the model so it loads once and doesn't reload every time
-@st.cache(allow_output_mutation=True)
-def load_model():
-    return pipeline("sentiment-analysis")
-
-# Load the pre-trained sentiment analysis pipeline
-sentiment_analyzer = load_model()
+# Load the pre-trained sentiment analysis pipeline (without caching)
+sentiment_analyzer = pipeline("sentiment-analysis")
 
 # Streamlit UI Elements
 st.title("EV Charging Station Sentiment Analysis")
