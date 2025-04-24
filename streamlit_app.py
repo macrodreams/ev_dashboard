@@ -24,7 +24,6 @@ DATA_PATH = os.path.join(os.path.dirname(__file__), "cleaned_ev_data.csv")
 if os.path.exists(DATA_PATH):
     EV_df = pd.read_csv(DATA_PATH)
     st.success(f"Loaded {DATA_PATH} successfully!")
-    st.dataframe(EV_df.head())
 else:
     st.error(f"Could not find {DATA_PATH}. Please ensure the file exists in the repository.")
     st.stop()
@@ -108,8 +107,48 @@ Do not explain what you did — just return the clean result.
     )
     return response.choices[0].message.content.strip()
 
-# User prompt
-user_prompt = st.text_area("Ask a question about the EV charging station data:")
+# Sidebar with predefined questions
+st.sidebar.header("Predefined Analysis Questions")
+
+predefined_questions = {
+    "Location-Based Analysis": [
+        "Which cities have the highest number of EV stations?",
+        "List all vendors with station count in San Jose, CA, and show it in a bar chart.",
+        "What is the average rank of stations in each city?",
+    ],
+    "Vendor Performance Insights": [
+        "Which EV vendor has the most stations overall?",
+        "Show average review score for each EV vendor in descending order.",
+        "List all vendors and their total review count.",
+    ],
+    "Quality & Ranking": [
+        "Which vendor has the best average rank across all locations?",
+        "Which stations have the most user reviews? List top 5 with vendor and location.",
+    ],
+    "Risk/Complaint Indicators": [
+        "Summarize common user complaints based on reviews.",
+    ],
+    "Trends & Strategy": [
+        "Create a bar chart comparing total stations by vendor in California.",
+    ],
+}
+
+category = st.sidebar.selectbox("Select Category", list(predefined_questions.keys()))
+question = st.sidebar.radio(
+    "Choose a question:",
+    predefined_questions[category],
+    key="predefined_question"
+)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("Or type your own question below:")
+
+# Main UI prompt box (pre-filled with selected question)
+user_prompt = st.text_area(
+    "Ask a question about the EV charging station data:",
+    value=question if question else "",
+    key="main_prompt_box"
+)
 
 if st.button("Submit Query") and user_prompt:
     with st.spinner("Processing your query..."):
