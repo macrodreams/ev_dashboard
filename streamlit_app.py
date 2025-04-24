@@ -100,5 +100,19 @@ if st.button("Submit Query") and user_prompt:
         final_response = clean_llm_output(response)
     st.subheader("LLM Response:")
     st.write(final_response)
+    # Try to display chart if present
     if hasattr(response, 'chart') and response.chart is not None:
-        st.pyplot(response.chart)
+        try:
+            import matplotlib.figure
+            if isinstance(response.chart, matplotlib.figure.Figure):
+                st.pyplot(response.chart)
+            elif isinstance(response.chart, str) and (response.chart.endswith('.png') or response.chart.endswith('.jpg')):
+                from PIL import Image
+                import os
+                if os.path.exists(response.chart):
+                    img = Image.open(response.chart)
+                    st.image(img, caption="Generated Chart")
+                else:
+                    st.warning(f"Chart image file not found: {response.chart}")
+        except Exception as e:
+            st.warning(f"Could not display chart: {e}")
