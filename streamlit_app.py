@@ -109,8 +109,9 @@ if submit and final_prompt:
             avg_rank = EV_df.groupby('EV Vendor')['rank'].mean().sort_values()
 
             # Display the vendor with the best (lowest) average rank
-            st.write("Vendor with the Best Average Rank Across All Locations:")
-            st.write(avg_rank.head(1))  # Display the vendor with the best rank
+            best_vendor = avg_rank.head(1)
+            st.write(f"Vendor with the Best Average Rank Across All Locations:")
+            st.write(f"{best_vendor.index[0]} with an average rank of {best_vendor.values[0]:.2f}")
 
         elif "most user reviews" in query:
             top_reviews = EV_df[['EV Vendor', 'location', 'reviewsCount']].sort_values(by='reviewsCount', ascending=False).head(5)
