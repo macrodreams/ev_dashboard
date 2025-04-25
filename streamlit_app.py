@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 from dotenv import load_dotenv
+import requests
 
 # Load environment variables
 load_dotenv()
@@ -25,6 +26,33 @@ if os.path.exists(DATA_PATH):
 else:
     st.error(f"Could not find {DATA_PATH}. Please ensure the file exists in the repository.")
     st.stop()
+
+# Google Maps API functions for fetching reviews and ratings
+API_KEY = st.secrets['GOOGLE_API_KEY']
+
+def get_place_id(name, lat, lng):
+    url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+    params = {
+        "key": API_KEY,
+        "location": f"{lat},{lng}",
+        "radius": 100,
+        "keyword": name
+    }
+    response = requests.get(url, params=params)
+    results = response.json().get("results", [])
+    if results:
+        return results[0]["place_id"]
+    return None
+
+def get_reviews(place_id):
+    url = "https://maps.googleapis.com/maps/api/place/details/json"
+    params = {
+        "key": API_KEY,
+        "place_id": place_id,
+        "fields": "rating,reviews"
+    }
+    response = requests.get(url, params=params)
+    return response.json().get("result", {})
 
 # Sidebar with predefined questions
 st.sidebar.header("Predefined Analysis Questions")
@@ -165,5 +193,23 @@ if submit and final_prompt:
             st.write("Vendors with Presence Across the Most Number of Cities:")
             st.table(vendor_city_count.head(10))
 
+        # New logic for retrieving and displaying Google Maps reviews and ratings
+        elif "reviews" in query or "rating" in query:
+            # Fetch Place ID based on a specific location
+            name = "ChargePoint Charging Station"  # Modify as needed
+            lat = 37.339623  # Modify with relevant latitude
+            lng = -121.896821  # Modify with relevant longitude
+            
+            place_id = get_place_id(name, lat, lng)
+
+            if place_id:
+                details = get_reviews(place_id)
+                st.subheader("⭐ Rating:")
+                st.write(details.get("rating", "No rating available"))
+                st.subheader("🗣️ Sample Review:")
+                review_text = details.get("reviews", [{}])[0].get("text", "No reviews available")
+                st.write(review_text)
+            else:
+                st.error("Could not find reviews for the specified station.")
         else:
             st.warning("Query not recognized or not supported yet. Please rephrase or select a predefined option.")
